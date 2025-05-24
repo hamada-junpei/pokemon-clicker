@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポケクリッカークエスト</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    /* Webkit系ブラウザ（Chrome, Safariなど）のカスタムスクロールバーのスタイル */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #d4d4d4; /* よりゲームボーイ風の背景色 */
+      border: 2px solid black;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #4a4a4a; /* 暗いグレー */
+      border: 2px solid black;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #2a2a2a;
+    }
+
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background-color: #c0c0c0; /* やや明るいグレー、ゲームボーイ風 */
+      color: #0f0f0f; /* 基本文字色を黒に近い色に */
+      image-rendering: pixelated; /* 全体的にピクセル感を出す */
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      overflow-x: hidden; /* 横スクロールバーを隠す */
+    }
+    
+    .pixelated-img {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+
+    /* ドット絵風UI基本スタイル */
+    .nes-button, .nes-panel, .nes-input {
+      border: 4px solid black;
+      box-shadow: 4px 4px 0px 0px black;
+      background-color: #f0f0f0; /* 明るいグレー */
+      color: #0f0f0f;
+      padding: 0.5rem 1rem;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 0.75rem; /* Press Start 2Pは大きめなので調整 */
+      line-height: 1.2;
+      margin: 4px 2px;
+      cursor: pointer;
+      position: relative; /* ホバーエフェクト用 */
+    }
+    .nes-button:hover:not(:disabled) {
+      background-color: #e0e0e0;
+      box-shadow: 2px 2px 0px 0px black; /* 少しへこむ感じ */
+      transform: translate(2px, 2px);
+    }
+    .nes-button:active:not(:disabled) {
+      background-color: #d0d0d0;
+      box-shadow: 0px 0px 0px 0px black; /* さらにへこむ */
+      transform: translate(4px, 4px);
+    }
+    .nes-button:disabled {
+      background-color: #a0a0a0;
+      color: #505050;
+      border-color: #505050;
+      box-shadow: 4px 4px 0px 0px #505050;
+      cursor: not-allowed;
+    }
+    .nes-panel {
+      padding: 1rem;
+    }
+
+    /* HP/XPバー スタイル */
+    .nes-progress-bar-container {
+      height: 16px; /* Press Start 2Pのフォントサイズに合わせる */
+      background-color: #d4d4d4;
+      border: 2px solid black;
+      padding: 2px;
+      box-shadow: inset 2px 2px 0px 0px rgba(0,0,0,0.2);
+    }
+    .nes-progress-bar {
+      height: 100%;
+      transition: width 0.15s ease-out;
+      border: none; /* 内側のボーダーは不要 */
+    }
+    .nes-progress-bar-hp { background-color: #50ff50; /* 明るい緑 */ }
+    .nes-progress-bar-hp-medium { background-color: #ffff50; /* 黄色 */ }
+    .nes-progress-bar-hp-low { background-color: #ff5050; /* 赤 */ }
+    .nes-progress-bar-hp-fainted { background-color: #707070; /* グレー */ }
+    .nes-progress-bar-xp { background-color: #50a0ff; /* 明るい青 */ }
+    .nes-progress-bar-enemy-hp { background-color: #ff5050; }
+
+
+    /* ダメージポップアップアニメーション */
+    @keyframes damage-popup-animation {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1.2); /* 開始時少し大きく */
+      }
+      20% {
+        transform: translateY(-10px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-60px) scale(0.7); /* より上に、小さく */
+      }
+    }
+    .damage-popup {
+      position: absolute;
+      font-size: 1.25rem; /* ポップアップは大きめに */
+      font-weight: bold;
+      pointer-events: none; /* クリックイベントを透過 */
+      z-index: 100;
+      padding: 2px 4px;
+      text-shadow: 1px 1px 0px black, -1px -1px 0px black, 1px -1px 0px black, -1px 1px 0px black;
+      animation: damage-popup-animation 1.2s ease-out forwards;
+    }
+    .damage-popup-player { color: #ff4040; /* 赤系 */ }
+    .damage-popup-enemy { color: #ffcc00; /* 黄色系 */ }
+    .damage-popup-critical {
+      color: #ff8000; /* オレンジ系 */
+    }
+    .damage-popup-heal { color: #40ff40; /* 緑系 */ }
+    .damage-popup-currency { color: #ffd700; /* 金色系、ポケドル獲得用 */ }
+    
+    /* 特定のTailwindクラスをオーバーライドまたは補強 */
+    .nes-text-sm { font-size: 0.6rem; line-height: 1.1; } /* Press Start 2P用スモールテキスト */
+    .nes-text-xs { font-size: 0.5rem; line-height: 1; }   /* Press Start 2P用エクストラスモールテキスト */
+    .nes-text-2xs { font-size: 0.4rem; line-height: 0.9; }
+
+    /* 画面全体のコンテナ */
+    .game-container {
+      max-width: 1280px; /* 適宜調整 */
+      margin: 0 auto;
+      padding: 0.5rem;
+    }
+    
+    /* Tailwindの影をドット絵風にするユーティリティ */
+    .pixel-shadow {
+      box-shadow: 4px 4px 0px 0px black;
+    }
+     .pixel-shadow-sm {
+      box-shadow: 2px 2px 0px 0px black;
+    }
+    .pixel-border {
+      border: 4px solid black;
+    }
+     .pixel-border-sm {
+      border: 2px solid black;
+    }
+
+    /* モーダル背景 */
+    .modal-backdrop {
+      background-color: rgba(0,0,0,0.6);
+    }
+    .nes-panel-modal {
+      background-color: #f0f0f0;
+      border: 4px solid black;
+      box-shadow: 6px 6px 0px 0px black;
+      padding: 1.5rem;
+      color: #0f0f0f;
+    }
+    .nes-header {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 4px solid black;
+      color: #0f0f0f;
+    }
+    .nes-close-button {
+      font-size: 1.5rem;
+      color: #0f0f0f;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .nes-close-button:hover {
+      color: #ff0000;
+    }
+
+    /* スクロール可能なコンテンツエリア */
+    .nes-content-scrollable {
+      max-height: calc(100% - 4rem); /* ヘッダー分を考慮 */
+      overflow-y: auto;
+      padding-right: 0.5rem; /* スクロールバーのスペース */
+    }
+
+    /* ポケモン応援時のアニメーション */
+    @keyframes pokemon-shake-animation {
+      0%, 100% { transform: translateX(0) rotate(0) scale(1); }
+      25% { transform: translateX(-2px) rotate(-2deg) scale(1.02); }
+      50% { transform: translateX(2px) rotate(2deg) scale(1.02); }
+      75% { transform: translateX(-2px) rotate(-2deg) scale(1.02); }
+    }
+    .pokemon-shake-animation {
+      animation: pokemon-shake-animation 0.25s ease-in-out;
+    }
+
+    .pokemon-image-wrapper { /* ポケモン画像とパーティクルのコンテナ */
+      position: relative;
+      display: inline-block; 
+    }
+
+    .pokemon-image-wrapper.sparkle::before,
+    .pokemon-image-wrapper.sparkle::after {
+      content: '✨';
+      position: absolute;
+      font-size: 1.2rem;
+      opacity: 0;
+      animation: sparkle-up-animation 0.6s ease-out forwards;
+      pointer-events: none;
+      text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+    }
+    .pokemon-image-wrapper.sparkle::before {
+      top: 25%;
+      left: 20%;
+      content: '💖'; 
+      font-size: 1rem;
+      animation-delay: 0.05s;
+    }
+    .pokemon-image-wrapper.sparkle::after {
+      top: 15%;
+      left: 70%;
+      content: '🎶'; 
+       animation-delay: 0.1s;
+    }
+
+    @keyframes sparkle-up-animation {
+      0% { opacity: 1; transform: translateY(0) scale(0.6); }
+      100% { opacity: 0; transform: translateY(-25px) scale(1); }
+    }
+    
+    /* PDS数値フラッシュアニメーション */
+    @keyframes pds-flash-animation {
+      0%, 100% { color: inherit; transform: scale(1); opacity: 1; }
+      50% { color: #16a34a; /* 濃い緑 */ transform: scale(1.08); opacity: 0.8; }
+    }
+    .pds-flash {
+      animation: pds-flash-animation 0.35s ease-out;
+    }
+
+    /* 進化アニメーション */
+    @keyframes evolution-flash {
+      0%, 100% { opacity: 1; filter: brightness(1); }
+      25% { opacity: 0.3; filter: brightness(1.5) contrast(2); transform: scale(1.05); } 
+      50% { opacity: 1; filter: brightness(2) saturate(0); transform: scale(0.95); } 
+      75% { opacity: 0.3; filter: brightness(1.5) contrast(2); transform: scale(1.05); } 
+    }
+    .pokemon-evolution-animation {
+        animation: evolution-flash 0.5s ease-in-out infinite; 
+    }
+
+    /* 農園モーダル用スタイル */
+    .farm-plot {
+      /* nes-button をベースに調整可能 */
+    }
+    .farm-seed-selection-list {
+      /* スクロール可能なリストのスタイル */
+    }
+
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.1.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.1.0/client",
+    "react/jsx-runtime": "https://esm.sh/react@19.1.0/jsx-runtime",
+    "react/jsx-dev-runtime": "https://esm.sh/react@19.1.0/jsx-dev-runtime",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "nanoid": "https://esm.sh/nanoid@^5.1.5"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html><link rel="stylesheet" href="index.css">
+<script src="index.tsx" type="module"></script>
