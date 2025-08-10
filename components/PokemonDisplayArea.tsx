@@ -275,10 +275,41 @@ export const PokemonDisplayArea: React.FC<PokemonDisplayAreaProps> = ({
             aria-label={`${displayData.name}のHP`}
           ></div>
         </div>
-      </div>
+        </div>
 
-      <div className={`relative my-0.5 h-24 w-24 md:h-28 md:w-28 pokemon-image-wrapper ${isSparkling ? 'sparkle' : ''}`}>
-        <img
-          src={isEvolvingAnimation && evolvingPokemonVisualId !== displayData.id ? POKEMONS.find(p=>p.id === evolvingPokemonVisualId)?.imageUrl || displayData.imageUrl : displayData.imageUrl}
-          alt={displayData.name}
-          className={`pixelated-img w-full h-full object-contain cursor-pointer transition-transform duration-150 ease-in-out hover
+        <div className={`relative my-0.5 h-24 w-24 md:h-28 md:w-28 pokemon-image-wrapper ${isSparkling ? 'sparkle' : ''}`}>
+          <img
+            src={isEvolvingAnimation && evolvingPokemonVisualId !== displayData.id ? POKEMONS.find(p => p.id === evolvingPokemonVisualId)?.imageUrl || displayData.imageUrl : displayData.imageUrl}
+            alt={displayData.name}
+            className={`pixelated-img w-full h-full object-contain cursor-pointer transition-transform duration-150 ease-in-out ${isShaking ? 'animate-shake' : ''} ${isFainted || allPlayerPokemonFainted ? '' : 'hover:scale-110 active:scale-95'}`}
+            onClick={handleCheer}
+            draggable="false"
+            style={{ imageRendering: 'pixelated' }}
+          />
+          {damagePopups.map(popup => (
+            <div
+              key={popup.id}
+              className={`damage-popup ${popup.type === 'player' ? 'damage-popup-player' : popup.type === 'heal' ? 'damage-popup-heal' : popup.type === 'currency' ? 'damage-popup-currency' : 'damage-popup-enemy'} ${popup.critical ? 'damage-popup-critical' : ''}`}
+              style={{ left: `calc(50% + ${popup.x}px)`, top: `calc(50% + ${popup.y}px)`, transform: 'translate(-50%, -50%)' }}
+            >
+              {popup.type === 'currency' ? `${popup.value} ${CURRENCY_SYMBOL}` : popup.critical ? `CRITICAL! ${popup.value}` : popup.value}
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center mt-1 select-none">
+          <p className={`font-bold text-base ${flashPdsText ? 'text-yellow-600 animate-pulse' : 'text-yellow-700'}`}> 
+            {formatNumber(pokeDollars)} {CURRENCY_SYMBOL}
+          </p>
+          <p className="nes-text-2xs text-gray-600">
+            +{formatNumber(pokeDollarsPerSecond, 1)} {CURRENCY_SYMBOL}/s
+            {cheerBuff.isActive && cheerBuff.endTime && (
+              <span className="ml-1 text-red-600">
+                応援中 {formatTime(cheerBuff.endTime - Date.now())}
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+    );
+};
